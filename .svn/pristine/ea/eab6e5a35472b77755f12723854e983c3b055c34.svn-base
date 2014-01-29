@@ -1,0 +1,79 @@
+package da;
+
+import java.util.ArrayList;
+import java.util.Vector;
+import javax.swing.table.AbstractTableModel;
+
+public class PortTableModel extends AbstractTableModel{
+	private static final long serialVersionUID = 1L;
+	private Vector<String> columnNames = new Vector<String>();
+	private Vector<String[]> data = new Vector<String[]>();
+	private Vector<String[]> allPorts = new Vector<String[]>();
+
+	public String[] getDataAt(int index){
+		return allPorts.get(index);
+	}
+
+	@Override
+	public int getColumnCount() {
+		return columnNames.size();
+	}
+
+	@Override
+	public int getRowCount() {
+		return data.size();
+	}
+
+	@Override
+	public Object getValueAt(int row, int col) {
+		switch(col){
+		case 0:
+			return data.elementAt(row)[0];
+		case 1:
+			return data.elementAt(row)[1];
+		case 2:
+			return data.elementAt(row)[2];
+		case 3:
+			return data.elementAt(row)[3];
+	}
+	throw new IllegalArgumentException("Cannot retrieve from selected field");
+	}
+
+	public void addData(String[] data){
+		this.data.add(data);
+	}
+
+	public int loadColumnNames() {
+		int colCount=0;
+		columnNames.addElement("Number");
+		columnNames.addElement("Protocol");
+		columnNames.addElement("Name");
+		columnNames.addElement("Description");
+		return colCount;
+	}
+
+	@SuppressWarnings("unchecked")
+	public void loadData(ArrayList<String[]> data){
+		this.data= new Vector<String[]>();
+		for(int i =0;i<data.size();i++)
+			this.data.add(data.get(i));
+		if(allPorts.size()<this.data.size())
+			allPorts = (Vector<String[]>)this.data.clone();
+		fireTableDataChanged();
+	}
+
+	@Override
+	public String getColumnName(int column){
+		return columnNames.get(column);
+	}
+
+	public Vector<String[]> getCachedData() {
+		return allPorts;
+	}
+
+	@SuppressWarnings("unchecked")
+	public void showAllData() {
+		data = (Vector<String[]>) allPorts.clone();
+		fireTableDataChanged();
+	}
+}

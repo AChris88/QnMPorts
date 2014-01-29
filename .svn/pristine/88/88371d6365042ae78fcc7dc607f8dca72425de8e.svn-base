@@ -1,0 +1,263 @@
+package da;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
+import javax.swing.JOptionPane;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
+public class DBManager {
+	private PortTableModel model;
+	private final boolean LOCAL;
+	private Connection connection = null;
+
+	public DBManager(PortTableModel model, boolean local){
+		this.model=model;
+		LOCAL=local;
+	}
+
+	private void remoteData(){
+		String url = "?";
+		String user = "?";
+		String password = "?";
+		try{
+			connection=DriverManager.getConnection(url,user,password);
+		}
+		catch(SQLException e){
+			JOptionPane.showMessageDialog(null,
+					"Cannot connect to the database remotely!","Connection Error!",
+					JOptionPane.ERROR_MESSAGE);
+		}
+		catch (Exception e){
+			JOptionPane.showMessageDialog(null,
+					"An unexpected error has occurred!","Connection Error!",
+					JOptionPane.ERROR_MESSAGE);
+		}
+
+	}
+
+	private void localData(){
+		parseXMLFile();
+//		try{
+//			File file = new File("");
+//			FileInputStream stream = new FileInputStream(file);
+//			InputStreamReader reader= new InputStreamReader(stream);
+//		}
+//		catch (IOException e){
+//			e.printStackTrace();
+//		}
+	}
+
+	private void parseXMLFile() {
+		try{
+			File xml = new File("C:\\ports.xml");
+			if(!xml.exists())
+				xml = new File("H:\\Projects\\QnMPort\\service-names-port-numbers.xml");
+
+			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+			DocumentBuilder builder = factory.newDocumentBuilder();
+			Document doc = builder.parse(xml);
+			doc.getDocumentElement().normalize();
+			NodeList nList = doc.getElementsByTagName("record");
+			ArrayList<String[]> data = new ArrayList<String[]>();
+		    String[] record = null;
+
+			for (int i = 0; i < nList.getLength(); i++) {
+			   Node nNode = nList.item(i);
+
+			   if (nNode.getNodeType() == Node.ELEMENT_NODE) {
+			      Element element = (Element) nNode;
+			      record = new String[4];
+			      record[0]= getTagValue("number", element);
+			      record[1]= getTagValue("protocol", element);
+			      record[2]= getTagValue("name", element);
+			      record[3]= getTagValue("description", element);
+
+			      data.add(record);
+			   }
+			}
+			model.loadData(data);
+			saveXMLFile(data);
+			model.loadColumnNames();
+		}
+		catch(Exception e){
+			e.printStackTrace();
+		}
+	}
+
+	private String createXMLString(ArrayList<String[]> data) {
+		String xml = "<?xml version='1.0' encoding='UTF-8'?>\n" +
+					 "<registry xmlns='www.iana.org/assignments/port-numbers' id='ports'>\n\t"+
+					 "<title>Parsed Ports</title>\n\t"+
+					 "<updated>2012-12-22</updated>\n\t"+
+					 "<note>Data obtained from www.iana.org/assignments/port-numbers</note>\n\t";
+
+			  for (int i = 0; i < data.size(); i++){
+				//Checking for ampersands and replacing
+				  if(data.get(i)[3]!=null && 
+					 data.get(i)[3].contains("&"))
+					  	data.get(i)[3] = data.get(i)[3].substring(0
+					  			,data.get(i)[3].indexOf('&')) +
+						"&amp;" + data.get(i)[3].substring(data.get(i)[3].indexOf('&')+1);
+				  
+				  if(data.get(i)[2]!=null && 
+					 data.get(i)[2].contains("&"))
+						data.get(i)[2] = data.get(i)[2].substring(0,data.get(i)[2].indexOf('&')) +
+						"&amp;" + data.get(i)[2].substring(data.get(i)[2].indexOf('&')+1);
+				  //have to fix crash caused by 'y' in swyp line 65403
+				  xml+="<record>\n\t\t<number>"+data.get(i)[0]+"</number>\n\t\t"+
+						  		"<protocol>"+data.get(i)[1]+"</protocol>\n\t\t"+
+						  		"<name>"+data.get(i)[2]+"</name>\n\t\t"+
+						  		"<description>"+data.get(i)[3]+"</description>\n\t</record>";
+			  }
+			  xml += "</registry>";
+		return xml;
+	}
+
+	private void saveXMLFile(ArrayList<String[]> data){
+		String xml = createXMLString(data);
+		File xmlfile= new File("C:\\ports.xml");
+		BufferedWriter writer = null;
+		try {
+		    writer = new BufferedWriter(new FileWriter(xmlfile));
+		    writer.write(xml);
+		    writer.close();
+		}
+		catch (IOException e) {
+		    e.printStackTrace();
+		} 
+	}
+
+	private static String getTagValue(String tag, Element eElement) {
+		NodeList nlList = null;
+		if(eElement.getElementsByTagName(tag).item(0)==null)
+			return "";
+
+		nlList = eElement.getElementsByTagName(tag).item(0).getChildNodes();
+
+		Node nValue = null;
+		if(nlList.getLength()>0)
+			nValue = (Node) nlList.item(0);
+
+		return nValue==null?"":nValue.getNodeValue();
+	  }
+
+	private void close(){
+		try{
+			connection.close();
+		}
+		catch (SQLException e){
+			JOptionPane.showMessageDialog(null,
+					"Unable to close connection to the database!","Connection Error!",
+					JOptionPane.ERROR_MESSAGE);
+		}
+	}
+
+	public List<String[]> getAllPorts(){
+		List<String[]> ports = new ArrayList<String[]>();
+		Statement statement = null;
+		ResultSet results = null;
+		String[] data = new String[3];	//TCP, UDP, appName
+
+		if(LOCAL)
+			localData();
+		else
+			remoteData();
+
+//		try{
+//			statement = connection.createStatement();
+//			results = statement.executeQuery("SELECT * FROM ports_table");
+//			
+//			while(results.next()){
+//				for(int i=0;i<data.length-1;i++)
+//					data[i]=results.getString(i);
+//				ports.add(data);
+//				model.addData(data);
+//			}
+//			
+//			ResultSetMetaData mtd = results.getMetaData();
+//			model.loadColumnNames(mtd);
+//		}
+//		catch (SQLException e){
+//			JOptionPane.showMessageDialog(null,
+//					"Unnable to load column names!","Connection Error!",
+//					JOptionPane.ERROR_MESSAGE);
+//		}
+//		finally{close();}
+		return ports;
+	}
+
+	public void getByPort(String num) {
+		ArrayList<String[]> data = new ArrayList<String[]>();
+		for(int i=0;i<model.getCachedData().size(); i++)
+			if(model.getDataAt(i)[0].equals(num))
+				data.add(model.getDataAt(i));
+		model.loadData(data);
+	}
+
+	public void getByPortRange(String text, String text2) {
+		//Should check user inputs in appropriate range,
+		//also make sure can't cause overflow with num length.
+		//String.compareTo() as opposed to parsing int then checking
+		ArrayList<String[]> data = new ArrayList<String[]>();
+		if(!text.equals("") && !text2.equals("")){
+			int num1 = Integer.parseInt(text);
+			int num2 = Integer.parseInt(text2);
+			int rangeCheck = num1>num2?num1:num2;
+			for(int i=0;rangeCheck>=Integer.parseInt(model.getDataAt(i)[0]); i++)
+				if(!model.getDataAt(i)[0].contains("-"))
+					if(Integer.parseInt(model.getDataAt(i)[0]) >= num1 &&
+					   Integer.parseInt(model.getDataAt(i)[0]) <= num2)
+							data.add(model.getDataAt(i));
+		}
+		else
+			JOptionPane.showMessageDialog(null, "You must enter a start and end point for range searches!");
+		model.loadData(data);
+	}
+
+	public void getByProtocol(String num) {
+		ArrayList<String[]> data = new ArrayList<String[]>();
+		for(int i=0;i<model.getCachedData().size(); i++)
+			if(model.getDataAt(i)[1].equals(num))
+				data.add(model.getDataAt(i));
+		model.loadData(data);
+	}
+
+	public void getByName(String num) {
+		ArrayList<String[]> data = new ArrayList<String[]>();
+		for(int i=0;i<model.getCachedData().size(); i++)
+			if(model.getDataAt(i)[2].equals(num))
+				data.add(model.getDataAt(i));
+		model.loadData(data);
+	}
+
+	public void getByDescription(String text) {
+
+	}
+
+	public void showAllPorts() {
+		model.showAllData();
+	}
+}

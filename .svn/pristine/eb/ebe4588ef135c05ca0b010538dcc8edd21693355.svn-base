@@ -1,0 +1,152 @@
+package ui;
+
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.Vector;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+
+import da.DBManager;
+
+public class SearchPanel extends JPanel{
+	private static final long serialVersionUID = 1L;
+	private String selection = "";
+	private DBManager manager = null;
+	public SearchPanel(DBManager manager){
+		super();
+		this.manager=manager;
+		initialize();
+	}
+
+	private void initialize(){
+		setLayout(new GridLayout(6,5));		
+		final JCheckBox check = new JCheckBox("Ranged");
+		add(check);
+		add(new JLabel());
+		add(new JLabel());
+		add(new JLabel());
+		add(new JLabel());
+		
+		final JLabel startLabel = new JLabel("Start:");
+		startLabel.setVisible(false);
+		add(startLabel);
+		final JTextField startField = new JTextField();
+		startField.setVisible(false);
+		add(startField);
+		add(new JLabel());
+		add(new JLabel());
+		add(new JLabel());
+		
+		final JLabel endLabel = new JLabel("End:");
+		endLabel.setVisible(false);
+		add(endLabel);
+		final JTextField endField = new JTextField();
+		endField.setVisible(false);
+		add(endField);
+		add(new JLabel());
+		add(new JLabel());
+		add(new JLabel());
+		
+		add(new JLabel("Value:"));
+		final JTextField field1 =new JTextField();
+		add(field1);
+		add(new JLabel());
+		add(new JLabel("Field:"));
+
+		Vector<String> fields = new Vector<String>();
+		fields.add("");
+		fields.add("Port #");
+		fields.add("Protocol");
+		fields.add("Name");
+		fields.add("Description");
+		final JButton search = new JButton("Search");
+		JComboBox<String> combo = new JComboBox<String>(fields);
+		combo.addActionListener(new ActionListener(){
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				selection = ((JComboBox<?>)e.getSource()).getSelectedItem().toString();
+				if(selection.equals("")){
+					search.setEnabled(false);
+					field1.setText("");
+					manager.showAllPorts();
+				}
+				else{
+					search.setEnabled(true);
+					field1.setText("");
+				}
+			}});
+		add(combo);
+
+		add(new JLabel());
+		add(new JLabel());
+		add(new JLabel());
+		add(new JLabel());
+		add(new JLabel());
+		
+		add(new JLabel());
+		add(new JLabel());
+
+		search.setEnabled(false);
+		search.addActionListener(new ActionListener(){
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				boolean ranged = false;
+				if(check.isSelected()){
+					manager.getByPortRange(startField.getText(), endField.getText());
+					ranged=true;
+				}
+				else
+					manager.showAllPorts();
+				if(field1.getText().equals(""))
+					manager.showAllPorts();
+				else
+					switch(selection){
+					case "Port #":
+						manager.getByPort(field1.getText(),ranged);
+						break;
+					case "Protocol":
+						manager.getByProtocol(field1.getText(),ranged);
+						break;
+					case "Name":
+						manager.getByName(field1.getText(),ranged);
+						break;
+					case "Description":
+						manager.getByDescription(field1.getText(),ranged);
+						break;
+					default:
+						//Should never, ever happen
+						JOptionPane.showMessageDialog(null, "Error, make sure you select a key/field to search!", "Search Error", JOptionPane.ERROR_MESSAGE);
+					}
+			}});
+		add(search);
+		add(new JLabel());
+		add(new JLabel());
+		
+		check.addActionListener(new ActionListener(){
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				if(check.isSelected()){
+					startLabel.setVisible(true);
+					startField.setVisible(true);
+					endLabel.setVisible(true);
+					endField.setVisible(true);
+				}
+				else{
+					startLabel.setVisible(false);
+					startField.setVisible(false);
+					startField.setText("");
+					endLabel.setVisible(false);
+					endField.setVisible(false);
+					endField.setText("");
+				}
+			}});
+		
+		setVisible(true);
+	}
+}

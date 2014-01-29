@@ -1,0 +1,30 @@
+package ui;
+
+import java.awt.BorderLayout;
+import java.awt.GridBagLayout;
+
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+
+public class PortTablePanel extends JPanel{
+	private static final long serialVersionUID = 1L;
+	private PortTable table = null;
+
+	public PortTablePanel(){
+		super();
+	}
+
+	public PortTablePanel(PortTable table){
+		this();
+		this.table=table;
+		initialize();
+	}
+
+	private void initialize() {
+		setLayout(new BorderLayout());
+		JScrollPane scroll = new JScrollPane(table);
+		setLayout(new BorderLayout());
+		add(scroll,BorderLayout.CENTER);
+		setVisible(true);
+	}
+}

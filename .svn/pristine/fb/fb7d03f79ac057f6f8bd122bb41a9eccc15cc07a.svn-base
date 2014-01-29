@@ -1,0 +1,117 @@
+package ui;
+
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.Vector;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+
+import da.DBManager;
+
+public class SearchPanel extends JPanel{
+	private static final long serialVersionUID = 1L;
+	private String selection = "";
+	private DBManager manager = null;
+	public SearchPanel(DBManager manager){
+		super();
+		this.manager=manager;
+		initialize();
+	}
+
+	private void initialize(){
+		setLayout(new GridLayout(4,5));		
+
+		add(new JLabel());
+		add(new JLabel());
+		add(new JLabel());
+		add(new JLabel());
+		add(new JLabel());
+		
+		add(new JLabel("Search:"));
+		final JTextField field1 =new JTextField();
+		add(field1);
+		add(new JLabel());
+		add(new JLabel("Field:"));
+
+		Vector<String> fields = new Vector<String>();
+		fields.add("");
+		fields.add("Port #");
+		fields.add("Port # Range");
+		fields.add("Protocol");
+		fields.add("Name");
+		fields.add("Description");
+		final JButton search = new JButton("Search");
+		final JTextField field2 = new JTextField();
+		JComboBox combo = new JComboBox(fields);
+		combo.addActionListener(new ActionListener(){
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				selection = ((JComboBox)e.getSource()).getSelectedItem().toString();
+				if(selection.equals("")){
+					search.setEnabled(false);
+					field2.setVisible(false);
+					field1.setText("");
+					manager.showAllPorts();
+				}
+				else{
+					search.setEnabled(true);
+					field1.setText("");
+					if(selection.equals("Port # Range")){
+						field2.setText("");
+						field2.setVisible(true);
+					}
+					else
+						field2.setVisible(false);
+				}
+			}});
+		add(combo);
+
+		add(new JLabel());
+		field2.setVisible(false);
+		add(field2);
+		add(new JLabel());
+		add(new JLabel());
+		add(new JLabel());
+
+		add(new JLabel());
+		add(new JLabel());
+
+		search.setEnabled(false);
+		search.addActionListener(new ActionListener(){
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				if(field1.getText().equals(""))
+					manager.showAllPorts();
+				else
+					switch(selection){
+					case "Port #":
+						manager.getByPort(field1.getText());
+						break;
+					case "Port # Range":
+						manager.getByPortRange(field1.getText(), field2.getText());
+						break;
+					case "Protocol":
+						manager.getByProtocol(field1.getText());
+						break;
+					case "Name":
+						manager.getByName(field1.getText());
+						break;
+					case "Description":
+						manager.getByDescription(field1.getText());
+						break;
+					default:
+						//Should never, ever happen
+						JOptionPane.showMessageDialog(null, "Error, make sure you select a key/field to search!", "Search Error", JOptionPane.ERROR_MESSAGE);
+					}
+			}});
+		add(search);
+		add(new JLabel());
+		add(new JLabel());
+		setVisible(true);
+	}
+}
