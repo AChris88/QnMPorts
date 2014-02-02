@@ -43,7 +43,7 @@ public class DataAccess {
 	private Logger logger = Logger.getLogger(getClass().getName());
 
 	/**
-	 * this is a comment
+	 * 
 	 */
 	public DataAccess() {
 		
